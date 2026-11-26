@@ -4,33 +4,27 @@
 
 Цель — закрепить базовые концепции Kubernetes на примере ML-сервиса инференса: `Namespace`, `Pod`, `Deployment`, `Service`, манифесты, `kubectl`, масштабирование и обновление. Лабораторная выполняется в три этапа: от заглушки на `lorem` до реальной модели.
 
-## Цель обучения
-После выполнения лабораторной студент умеет:
-1. Описывать приложение в виде Kubernetes-манифестов (`Deployment`, `Service`).
-2. Изолировать работу в собственном `Namespace`.
-3. Собирать Docker-образ и загружать его в локальный кластер.
-4. Разворачивать приложение, проверять состояние подов и сервиса.
-5. Получать доступ к API через `kubectl port-forward`.
-6. Масштабировать `Deployment` и наблюдать поведение `Service`.
-7. Обновлять версию приложения и откатывать изменения (`rollout`).
-
 ## Предварительные требования
 | Инструмент | Версия | Назначение |
 |---|---|---|
-| Docker | 24+ | Сборка образа |
+| Docker Desktop | 4.x | Сборка образа + локальный кластер Kubernetes |
 | `kubectl` | 1.28+ | Управление кластером |
-| `minikube` или `kind` | актуальная | Локальный кластер |
 | Python | 3.11+ | Локальный запуск приложения |
 | `curl` / Postman | — | Проверка API |
 
-Кластер должен быть запущен до начала работы:
-```bash
-# вариант minikube
-minikube start --driver=docker
+**Основной сценарий — Windows + Docker Desktop:** включите встроенный кластер
+Kubernetes (Settings → Kubernetes → Enable Kubernetes) и дождитесь статуса
+`Ready`:
 
-# вариант kind
-kind create cluster --name ml-lab
+```bash
+kubectl get nodes
 ```
+**Для Linux (ноутбуки без Docker Desktop)** используется minikube:
+```bash
+minikube start --driver=docker
+```
+Отличий для minikube ровно два: загрузка образа в кластер (```minikube image load```) и доступ к сервису (```minikube service``` или ```port-forward```).
+
 ## Структура репозитория
 ```text
 k8s-ml-inference-lab/
@@ -50,7 +44,9 @@ k8s-ml-inference-lab/
 └── docs/
     └── kubectl-cheatsheet.md
 ```
-Каждый этап — самостоятельный каталог: своё приложение, свой Dockerfile, свои манифесты. Имя репозитория не привязано к конкретной модели, поэтому новые варианты заданий добавляются как новые этапы.
+Каждый этап — самостоятельный каталог: своё приложение, свой Dockerfile, свои манифесты. Имя репозитория не привязано к конкретному заданию, поэтому новые задания добавляются как новые этапы.
+**Пространство имён**. Каждый студент работает в своём namespace: ml-inference-studentNN (NN — порядковый номер по списку). Замените NN во всех командах на свой номер.
+
 ## Этапы
 | Этап | Версия образа | Что добавляется | Что закрепляется в K8s |
 |---|---|---|---|
@@ -59,3 +55,26 @@ k8s-ml-inference-lab/
 |3|inference-api:v3.0|Реальная модель по варианту (пример — «Титаник»)|Та же инфраструктура, меняется только контейнер
 
 Архитектура K8s на всех этапах не меняется — меняется только образ и API. Это ключевой методический момент: инфраструктура стабильна, приложение эволюционирует.
+
+## Быстрый старт (этап 1) 
+```bash
+# 1. Локальная проверка приложения (по желанию)
+python3 -m venv .venv
+source .venv/bin/activate            # Windows PowerShell: .venv\Scripts\Activate.ps1
+pip install -r stages/01-lorem/app/requirements.txt
+uvicorn main:app --app-dir stages/01-lorem/app
+# проверка: http://localhost:8000/health
+
+# 2. Сборка образа
+cd stages/01-lorem/app
+docker build -t inference-api:v1.0 .
+
+# 3. Развёртывание
+kubectl apply -f ../k8s/namespace.yaml
+kubectl apply -f ../k8s/deployment.yaml
+kubectl apply -f ../k8s/service.yaml
+
+# 4. Проверка
+kubectl get all -n ml-inference-studentNN
+curl http://localhost/infer
+```
