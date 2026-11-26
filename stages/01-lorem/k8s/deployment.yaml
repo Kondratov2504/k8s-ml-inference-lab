@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: inference-api
-  namespace: ml-inference-student01
+  namespace: ml-inference-student07
 spec:
   replicas: 1
   selector:
@@ -18,3 +18,9 @@ spec:
           image: inference-api:v1.0
           ports:
             - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 3
+            periodSeconds: 5

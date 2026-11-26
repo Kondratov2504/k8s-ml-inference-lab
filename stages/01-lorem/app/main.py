@@ -16,3 +16,4 @@ def infer() -> dict:
         "model_version": MODEL_VERSION,
         "result": lorem.sentence(),
     }
+	
